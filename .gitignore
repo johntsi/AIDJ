@@ -1,7 +1,11 @@
+.vscode/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+*.ipynb
+*.otf
 
 # C extensions
 *.so
@@ -26,6 +30,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+jobs/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
