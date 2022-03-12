@@ -45,7 +45,7 @@ def aggregate_comment_embeddings(
     if aggregation_method == "mean":
         track_embedding = torch.mean(comment_embeddings, dim=0)
     elif aggregation_method == "weighted_mean":
-        likes = torch.tensor(likes)
+        likes = torch.tensor(likes).to(comment_embeddings.device)
         total_likes = likes.sum()
         if total_likes > 0:
             track_embedding = (
@@ -77,43 +77,50 @@ def main(
 
     """
 
-    df_tracklist = pd.read_csv(data_dir / "main_clean_tracklist.csv", index_col=0)
+    df_tracklist = pd.read_csv(data_dir / "clean_tracklist.csv", index_col=0)
+    
+    if (data_dir / "track_embeddings.pt").is_file():
+        data = torch.load(data_dir / "track_embeddings.pt", map_location=torch.device("cpu"))
+        track_embeddings, new_track_indices = data["track_embeddings"], data["new_track_indices"]
+    else:
+        
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = SentenceTransformer(model_name).to(device)
+        model.eval()
+        
+        track_embeddings = []
+        track_indices = list(df_tracklist.index)
+        new_track_indices = []
 
-    model = SentenceTransformer(model_name)
-    model.eval()
+        for track_idx, track_row in tqdm(df_tracklist.iterrows()):
 
-    track_embeddings = []
+            # load comments from the cleaned json file
+            comments, likes = get_track_data(data_dir.parent / track_row["subdir"], track_row["subdir_idx"], n_best)
 
-    track_indices = list(df_tracklist.index)
-    new_track_indices = []
+            # skip tracks with few comments
+            if len(comments) < min_comments:
+                continue
 
-    for track_idx in tqdm(track_indices):
+            new_track_indices.append(track_idx)
 
-        # load comments from the cleaned json file
-        comments, likes = get_track_data(data_dir, track_idx, n_best)
-
-        # skip tracks with few comments
-        if len(comments) < min_comments:
-            continue
-
-        new_track_indices.append(track_idx)
-
-        # embed the comments
-        with torch.no_grad():
-            comment_embeddings = model.encode(comments, convert_to_tensor=True)
-
-        # aggregate them to a track embedding
-        track_embedding = aggregate_comment_embeddings(
-            comment_embeddings, aggregation_method, likes
-        )
-        track_embeddings.append(track_embedding)
-
-    track_embeddings = torch.cat(track_embeddings, dim=0)
+            # embed the comments
+            with torch.no_grad():
+                comment_embeddings = model.encode(comments, convert_to_tensor=True)
+                
+            # aggregate them to a track embedding
+            track_embedding = aggregate_comment_embeddings(
+                comment_embeddings, aggregation_method, likes
+            )
+            track_embeddings.append(track_embedding)
+            
+        track_embeddings = torch.cat(track_embeddings, dim=0)
+        
+        torch.save({"track_embeddings": track_embeddings, "new_track_indices": new_track_indices}, data_dir / "track_embeddings.pt")
 
     # get the NxN similarity matrix between each track
     # according to the cosine similarity between the track embeddings
-    similarity_matrix = util.pytorch_cos_sim(track_embeddings, track_embeddings).numpy()
-    similarity_matrix = np.fill_diagonal(similarity_matrix, 0.)
+    similarity_matrix = util.pytorch_cos_sim(track_embeddings, track_embeddings).cpu().numpy()
+    np.fill_diagonal(similarity_matrix, 0.)
     similarity_matrix = pd.DataFrame(
         similarity_matrix,
         index=new_track_indices,
@@ -145,7 +152,7 @@ if __name__ == "__main__":
         "-a",
         type=str,
         choices=["mean", "weighted_mean", "max"],
-        default="mean",
+        default="weighted_mean",
         help="The aggregation method from a collection of comment embeddings to a single track embedding.",
     )
     parser.add_argument(

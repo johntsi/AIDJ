@@ -37,7 +37,7 @@ def clean_main_tracklist(data_dir: Path) -> None:
     remove tracks from the full tracklist to create the main one
     """
 
-    df_tracklist = pd.read_csv(data_dir / "scraped_youtube_tracklist.csv", index_col=0)
+    df_tracklist = pd.read_csv(data_dir / "scraped_track_list.csv", index_col=0)
     df_feedinglist = pd.read_csv(
         data_dir / "feeding_tracklist.tsv", sep="\t"
     )
@@ -48,13 +48,13 @@ def clean_main_tracklist(data_dir: Path) -> None:
     # remove tracks with inconsistant durations according to source
     name_to_duration = extract_durations_from_source(data_dir / "AWWZ_full_library.xml")
     for idx, row in df_tracklist.iterrows():
-        correct_duration = name_to_duration.get(row["name"], 0)
-        if not (
-            row["youtube_duration_sec"] - 20
-            <= correct_duration
-            <= row["youtube_duration_sec"] + 20
-        ):
-            df_tracklist.drop(index=idx, inplace=True)
+        if row["name"] in name_to_duration.keys():
+            if not (
+                row["youtube_duration_sec"] - 20
+                <= correct_duration
+                <= row["youtube_duration_sec"] + 20
+            ):
+                df_tracklist.drop(index=idx, inplace=True)
 
     # remove possibly invalid
     df_tracklist = df_tracklist.loc[~df_tracklist.possibly_incorrect, :]
@@ -92,18 +92,23 @@ def clean_main_tracklist(data_dir: Path) -> None:
     df_tracklist["genre"] = "NA"
     df_tracklist["average_bpm"] = 0.0
     avail_tracks = df_tracklist["name"].tolist()
-    for _, (name, _, genre, average_bpm, _) in df_feedinglist.iterrows():
+    
+    # for _, (name, _, genre, average_bpm, _) in df_feedinglist.iterrows():
+    #     if name in avail_tracks:
+    #         df_tracklist.loc[name == df_tracklist["name"], ["genre", "average_bpm"]] = [
+    #             genre,
+    #             average_bpm,
+    #         ]
+    
+    for _, (name, _, average_bpm, _, _, _) in df_feedinglist.iterrows():
         if name in avail_tracks:
-            df_tracklist.loc[name == df_tracklist["name"], ["genre", "average_bpm"]] = [
-                genre,
-                average_bpm,
-            ]
+            df_tracklist.loc[name == df_tracklist["name"], "average_bpm"] = average_bpm
 
     df_tracklist.drop(
         index=df_tracklist[df_tracklist["average_bpm"] == 0].index, inplace=True
     )
 
-    main_clean_tracklist_path = data_dir / "main_clean_tracklist.csv"
+    main_clean_tracklist_path = data_dir / "clean_tracklist.csv"
     df_tracklist.to_csv(main_clean_tracklist_path)
 
     print(

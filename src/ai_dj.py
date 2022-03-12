@@ -5,7 +5,6 @@ from typing import Tuple, Union
 import networkx as nx
 import numpy as np
 import pandas as pd
-from pandas.core.series import Series
 from pyvis.network import Network
 
 
@@ -38,6 +37,7 @@ class AiDj:
         self.tracklist.index = self.tracklist.index.map(int)
         self.similarity_matrix.index = self.similarity_matrix.index.map(int)
         self.similarity_matrix.columns = self.similarity_matrix.columns.map(int)
+        self.tracklist.average_bpm = self.tracklist.apply(lambda x: x["average_bpm"].replace(",", "."), axis=1).astype(float)
 
         # account for NANS in artist column
         self.tracklist.loc[self.tracklist.artist.isna(), "artist"] = "NA"

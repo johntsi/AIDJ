@@ -2,7 +2,6 @@ import argparse
 import html
 import json
 import re
-import sys
 import string
 from collections import Counter
 from pathlib import Path
@@ -15,6 +14,9 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import pandas as pd
 
+import os
+import sys
+sys.path.insert(0, os.getcwd())
 from src.scripts.emoticons.emoji_to_emoticon import EmojiToEmoticon
 
 try:
@@ -234,7 +236,7 @@ def process_data(
     and also in the "main_comment_corpus.txt" if they come from the main tracklist
     """
 
-    lang_pred_model = fasttext.load_model(data_dir / "lid.176.bin")
+    lang_pred_model = fasttext.load_model(str(data_dir / "lid.176.bin"))
     df_tracks = pd.read_csv(data_dir / subdir_name / "track_list.csv", index_col=0)
 
     scraped_data_dir = data_dir / subdir_name / "scraped_comment_data"
@@ -302,7 +304,7 @@ def process_data(
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_root", "-d", type=str, required=True)
+    parser.add_argument("--data_dir", "-d", type=str, required=True)
     parser.add_argument("--subdir_name", type=str, required=True)
     parser.add_argument("--get_replies", "-r", action="store_true")
     parser.add_argument("--max_char_length", "-mx", type=int, default=200)
