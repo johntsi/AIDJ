@@ -52,7 +52,7 @@ Find youtube tracks that correspond to the ones from the initial tracklists. All
 [optional] There is the option to find also related tracks (extra from the ones in the feeding tracklist) that can be used to create a large enough dataset to fine-tune the language model. For the final version of this project, this option was not used. If you want to scrape the additional track, run the command below with the argument `--scrape_related`, which will add approximately 10,000 more tracks to the tracklist.
 
 ```bash
-python ${SONAR_ROOT}/src/scripts/create_tracklist.py -d ${SONAR_ROOT}/data
+python ${SONAR_ROOT}/src/scripts/create_tracklist.py -d ${DATA_ROOT} -tsv ...
 ```
 
 ### 5. Youtube scraping
@@ -60,7 +60,7 @@ python ${SONAR_ROOT}/src/scripts/create_tracklist.py -d ${SONAR_ROOT}/data
 Scrape the first 5000 comments from tracks found in the previous step and store the data in json files with the track idx as their name at `${SONAR_ROOT}/data/scrapped_comment_data`
 
 ```bash
-bash ${SONAR_ROOT}/src/scripts/scrape_tracklist.sh ${SONAR_ROOT}/data/scraped_youtube_ids.txt ${SONAR}/data/scraped_comment_data 5000
+bash ${SONAR_ROOT}/src/scripts/scrape_tracklist.sh ${SONAR_ROOT}/data/scraped_youtube_ids.txt ${SONAR}/data/scraped_comment_data $output_dir 5000
 ```
 
 ### 6. Processing the scraped comments
@@ -76,7 +76,7 @@ wget https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin -O ${
 ```
 
 ```bash
-python ${SONAR_ROOT}/src/scripts/process_data.py -d ${SONAR_ROOT}/data
+python ${SONAR_ROOT}/src/scripts/process_data.py -d ${SONAR_ROOT}/data --subdir_name ...
 ```
 
 ### 7. Data Analysis and Visualizations

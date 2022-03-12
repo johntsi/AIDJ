@@ -216,6 +216,7 @@ def get_tokens(
 
 def process_data(
     data_dir: Path,
+    subdir_name: str,
     get_replies: bool,
     max_length: int,
     min_length: int
@@ -233,11 +234,11 @@ def process_data(
     and also in the "main_comment_corpus.txt" if they come from the main tracklist
     """
 
-    lang_pred_model = fasttext.load_model(data_dir / "fasttext_model_lid_176.bin")
-    df_tracks = pd.read_csv(data_dir / "track_list.csv", index_col=0)
+    lang_pred_model = fasttext.load_model(data_dir / "lid.176.bin")
+    df_tracks = pd.read_csv(data_dir / subdir_name / "track_list.csv", index_col=0)
 
-    scraped_data_dir = data_dir / "scraped_comment_data"
-    cleaned_data_dir = data_dir / "cleaned_comment_data"
+    scraped_data_dir = data_dir / subdir_name / "scraped_comment_data"
+    cleaned_data_dir = data_dir / subdir_name / "cleaned_comment_data"
 
     cleaned_data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -285,14 +286,14 @@ def process_data(
             json.dump(track_data, clean_file)
 
         with open(
-            data_dir / Path("full_comment_corpus.txt"), "a", encoding="UTF8"
+            data_dir / subdir_name / "full_comment_corpus.txt", "a", encoding="UTF8"
         ) as txt_file:
             for comment_data in track_data["comments"]:
                 txt_file.write(comment_data["text"] + "\n")
 
         if df_tracks.loc[track_idx, "list_type"] == "main":
             with open(
-                data_dir / Path("main_comment_corpus.txt"), "a", encoding="UTF8"
+                data_dir / subdir_name / "main_comment_corpus.txt", "a", encoding="UTF8"
             ) as txt_file:
                 for comment_data in track_data["comments"]:
                     txt_file.write(comment_data["text"] + "\n")
@@ -301,7 +302,8 @@ def process_data(
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", "-d", type=str, required=True)
+    parser.add_argument("--data_root", "-d", type=str, required=True)
+    parser.add_argument("--subdir_name", type=str, required=True)
     parser.add_argument("--get_replies", "-r", action="store_true")
     parser.add_argument("--max_char_length", "-mx", type=int, default=200)
     parser.add_argument("--min_char_length", "-mn", type=int, default=3)
@@ -309,6 +311,7 @@ if __name__ == "__main__":
 
     process_data(
         Path(args.data_dir),
+        args.subdir_name,
         args.get_replies,
         args.max_char_length,
         args.min_char_length
