@@ -6,6 +6,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from pyvis.network import Network
+from fuzzywuzzy import fuzz
 
 
 class AiDj:
@@ -93,6 +94,15 @@ class AiDj:
             id_to_artists[track_id] = set(artists)
 
         return id_to_artists
+    
+    def _find_most_similar_track_name(self, track_name: str) -> str:
+        best_score, best_match = 0, ""
+        for potential_track_name in self.tracklist["name"].tolist():
+            score = fuzz.ratio(potential_track_name, track_name)
+            if score > best_score:
+                best_score = score
+                best_match = potential_track_name
+        return best_match, best_score
 
     def _get_track_weights(self) -> Tuple[np.ndarray, int]:
         """
@@ -185,8 +195,15 @@ class AiDj:
                     self.tracklist["name"] == track_name
                 ].tolist()[0]
             else:
-                track_id = -1
-                print(f"Warning: track name {track_name} was not found.")
+                track_name, match_score = self._find_most_similar_track_name(track_name)
+                if match_score > 50:
+                    print(f"Warning: Picking the best match {track_name} with score {match_score}")
+                    track_id = self.tracklist.index[
+                        self.tracklist["name"] == track_name
+                    ].tolist()[0]
+                else:
+                    track_id = -1
+                    print(f"Warning: track name {track_name} was not found.")
         elif track_name is None:
             track_name = self.tracklist.loc[track_id, "name"]
         else:
