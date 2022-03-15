@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 from typing import Tuple, Union
-
+from unidecode import unidecode
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -47,6 +47,8 @@ class AiDj:
 
         self.track_ids = self.tracklist.index.tolist()
         self.tracklist_size = len(self.track_ids)
+        
+        self.tracklist["name"] = self.tracklist.apply(lambda x: unidecode(x["name"]).lower(), axis=1)
 
         # initialize current dj set
         self.reset_dj_set()
@@ -175,6 +177,8 @@ class AiDj:
         Appends a track on the current dj set
         """
 
+        track_name = unidecode(track_name).lower()
+
         if track_id is None:
             if track_name in self.tracklist.name.tolist():
                 track_id = self.tracklist.index[
@@ -182,6 +186,7 @@ class AiDj:
                 ].tolist()[0]
             else:
                 track_id = -1
+                print(f"Warning: track name {track_name} was not found.")
         elif track_name is None:
             track_name = self.tracklist.loc[track_id, "name"]
         else:
