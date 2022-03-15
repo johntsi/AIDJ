@@ -38,7 +38,9 @@ class AiDj:
         self.tracklist.index = self.tracklist.index.map(int)
         self.similarity_matrix.index = self.similarity_matrix.index.map(int)
         self.similarity_matrix.columns = self.similarity_matrix.columns.map(int)
-        self.tracklist.average_bpm = self.tracklist.apply(lambda x: x["average_bpm"].replace(",", "."), axis=1).astype(float)
+        self.tracklist.average_bpm = self.tracklist.apply(
+            lambda x: float(str(x["average_bpm"]).replace(",", ".")), axis=1
+        ).astype(float)
 
         # account for NANS in artist column
         self.tracklist.loc[self.tracklist.artist.isna(), "artist"] = "NA"
@@ -48,8 +50,10 @@ class AiDj:
 
         self.track_ids = self.tracklist.index.tolist()
         self.tracklist_size = len(self.track_ids)
-        
-        self.tracklist["name"] = self.tracklist.apply(lambda x: unidecode(x["name"]).lower(), axis=1)
+
+        self.tracklist["name"] = self.tracklist.apply(
+            lambda x: unidecode(x["name"]).lower(), axis=1
+        )
 
         # initialize current dj set
         self.reset_dj_set()
@@ -94,7 +98,7 @@ class AiDj:
             id_to_artists[track_id] = set(artists)
 
         return id_to_artists
-    
+
     def _find_most_similar_track_name(self, track_name: str) -> str:
         best_score, best_match = 0, ""
         for potential_track_name in self.tracklist["name"].tolist():
@@ -187,9 +191,8 @@ class AiDj:
         Appends a track on the current dj set
         """
 
-        track_name = unidecode(track_name).lower()
-
         if track_id is None:
+            track_name = unidecode(track_name).lower()
             if track_name in self.tracklist.name.tolist():
                 track_id = self.tracklist.index[
                     self.tracklist["name"] == track_name
@@ -197,7 +200,9 @@ class AiDj:
             else:
                 track_name, match_score = self._find_most_similar_track_name(track_name)
                 if match_score > 50:
-                    print(f"Warning: Picking the best match {track_name} with score {match_score}")
+                    print(
+                        f"Warning: Picking the best match {track_name} with score {match_score}"
+                    )
                     track_id = self.tracklist.index[
                         self.tracklist["name"] == track_name
                     ].tolist()[0]
@@ -230,11 +235,7 @@ class AiDj:
             self.played_artists.update(self.id_to_artists[track_id])
         else:
             self.played_track_info.append(
-                {
-                    "dj": dj,
-                    "track_id": -1,
-                    "track_name":  track_name
-                }
+                {"dj": dj, "track_id": -1, "track_name": track_name}
             )
 
     def select_next_track(self) -> Tuple[int, str, float, float, int]:
@@ -259,9 +260,7 @@ class AiDj:
         )
 
         # zero score for tracks with previously played artists
-        transition_scores = self._apply_no_artist_repeat(
-            transition_scores
-        )
+        transition_scores = self._apply_no_artist_repeat(transition_scores)
 
         # zero score for tracks with disimilar bpms
         transition_scores = self._apply_similar_bpm(transition_scores)
@@ -281,23 +280,30 @@ class AiDj:
         next_track_id, next_track_prob = self._sample_track(transition_probabilities)
         next_track_name = self.tracklist.loc[next_track_id, "name"]
 
-        return next_track_id, next_track_name, transition_scores, transition_probabilities
+        return (
+            next_track_id,
+            next_track_name,
+            transition_scores,
+            transition_probabilities,
+        )
 
     def select_and_add_next_track(self) -> Tuple[str, pd.Series, pd.Series]:
 
         if not self.played_track_ids:
             next_track_id = np.random.choice(self.track_ids)
             next_track_name = self.tracklist.loc[next_track_id, "name"]
-            transition_scores = pd.Series(self.tracklist_size * [1], index=self.tracklist.index)
+            transition_scores = pd.Series(
+                self.tracklist_size * [1], index=self.tracklist.index
+            )
             transition_probabilities = transition_scores / self.tracklist_size
         else:
             (
                 next_track_id,
                 next_track_name,
                 transition_scores,
-                transition_probabilities
+                transition_probabilities,
             ) = self.select_next_track()
-            
+
         self.add_track(
             track_id=next_track_id,
             dj="AI",
