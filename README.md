@@ -163,7 +163,7 @@ aidj = AiDj(data_dir / "main_clean_tracklist.csv",
 aidj.add_track(track_name = "DIME QUÉ QUIERES SABER", dj = "human")
 
 # (ACTION) aidj selects the next track
-next_track_name = aidj.select_and_add_next_track()
+next_track_name, _, _ = aidj.select_and_add_next_track()
 
 # (ACTION) human dj plays next track and we inform aidj about it as before
 # ...

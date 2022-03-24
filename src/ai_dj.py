@@ -44,9 +44,11 @@ class AiDj:
 
         # account for NANS in artist column
         self.tracklist.loc[self.tracklist.artist.isna(), "artist"] = "NA"
-
-        # remove tracks that are not in the simialrity matrix
-        self.tracklist = self.tracklist.loc[self.similarity_matrix.index, :]
+        
+        # keep common tracks
+        common_idx = sorted(set(self.tracklist.index.tolist()).intersection(self.similarity_matrix.index.tolist()))
+        self.tracklist = self.tracklist.loc[common_idx]
+        self.similarity_matrix = self.similarity_matrix.loc[common_idx, common_idx]
 
         self.track_ids = self.tracklist.index.tolist()
         self.tracklist_size = len(self.track_ids)
@@ -191,6 +193,7 @@ class AiDj:
         Appends a track on the current dj set
         """
 
+        original_track_name = track_name
         if track_id is None:
             track_name = unidecode(track_name).lower()
             if track_name in self.tracklist.name.tolist():
@@ -201,14 +204,14 @@ class AiDj:
                 track_name, match_score = self._find_most_similar_track_name(track_name)
                 if match_score > 50:
                     print(
-                        f"Warning: Picking the best match {track_name} with score {match_score}"
+                        f"Warning: Picking the best match << {original_track_name} >> --->  << {track_name} >> with score {match_score}"
                     )
                     track_id = self.tracklist.index[
                         self.tracklist["name"] == track_name
                     ].tolist()[0]
                 else:
                     track_id = -1
-                    print(f"Warning: track name {track_name} was not found.")
+                    print(f"Warning: track name << {original_track_name} >> was not found. Most similar is << {track_name} >>")
         elif track_name is None:
             track_name = self.tracklist.loc[track_id, "name"]
         else:
