@@ -44,9 +44,13 @@ class AiDj:
 
         # account for NANS in artist column
         self.tracklist.loc[self.tracklist.artist.isna(), "artist"] = "NA"
-        
+
         # keep common tracks
-        common_idx = sorted(set(self.tracklist.index.tolist()).intersection(self.similarity_matrix.index.tolist()))
+        common_idx = sorted(
+            set(self.tracklist.index.tolist()).intersection(
+                self.similarity_matrix.index.tolist()
+            )
+        )
         self.tracklist = self.tracklist.loc[common_idx]
         self.similarity_matrix = self.similarity_matrix.loc[common_idx, common_idx]
 
@@ -59,6 +63,9 @@ class AiDj:
 
         # initialize current dj set
         self.reset_dj_set()
+        
+        # initialize variable to update the current bpms
+        self.last_bpm_value = None
 
         # extract artists from track data to a dictionary
         self.id_to_artists = self._extract_artists()
@@ -170,14 +177,15 @@ class AiDj:
         compared to the current one
         """
         if self.bpm_range is not None:
-            last_track_bpm = self.tracklist.loc[
-                self.played_track_ids[-1], "average_bpm"
-            ]
-            bpm_legal_transitions = (
-                np.abs(self.tracklist.loc[:, "average_bpm"].values - last_track_bpm)
-                <= self.bpm_range
-            )
-            transition_probabilities *= bpm_legal_transitions
+            if self.last_bpm_value is not None:
+                bpm_legal_transitions = (
+                    np.abs(
+                        self.tracklist.loc[:, "average_bpm"].values
+                        - self.last_bpm_value
+                    )
+                    <= self.bpm_range
+                )
+                transition_probabilities *= bpm_legal_transitions
         return transition_probabilities
 
     def add_track(
@@ -211,7 +219,11 @@ class AiDj:
                     ].tolist()[0]
                 else:
                     track_id = -1
-                    print(f"Warning: track name << {original_track_name} >> was not found. Most similar is << {track_name} >>")
+                    print(
+                        f"Warning: track name << {original_track_name} >> was not found. \n"
+                        f"Most similar was << {track_name} >> \n"
+                        "Registering unknown track..."
+                    )
         elif track_name is None:
             track_name = self.tracklist.loc[track_id, "name"]
         else:
@@ -219,6 +231,7 @@ class AiDj:
 
         if track_id != -1:
             self.played_track_ids.append(track_id)
+            self.last_bpm_value = self.tracklist.loc[track_id, "average_bpm"]
             self.played_track_info.append(
                 {
                     "dj": dj,
@@ -229,7 +242,7 @@ class AiDj:
                     "transition_prob": transition_prob
                     if transition_prob is not None
                     else 1,
-                    "track_bpm": self.tracklist.loc[track_id, "average_bpm"],
+                    "track_bpm": self.last_bpm_value,
                     "num_possible_transitions": num_possible_transitions
                     if num_possible_transitions is not None
                     else self.tracklist_size - len(self.played_track_ids),
