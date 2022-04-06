@@ -202,7 +202,7 @@ class AiDj:
                 ].tolist()[0]
             else:
                 track_name, match_score = self._find_most_similar_track_name(track_name)
-                if match_score > 50:
+                if match_score > 75:
                     print(
                         f"Warning: Picking the best match << {original_track_name} >> --->  << {track_name} >> with score {match_score}"
                     )
